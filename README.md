@@ -1,134 +1,173 @@
-# Ask-My-Table – Dockerized
+# 🧠 Ask My Table
 
-This folder contains a ready-to-run **Docker setup** for your FastAPI app, which connects to **SQL Server or Synapse** via `pyodbc` and the **Microsoft ODBC 18 driver**.
-
----
-
-## Files
-
-- `Dockerfile` – Python 3.11 + msodbcsql18 + uvicorn
-- `docker-compose.yml` – simple orchestration with `.env` and bind-mount for `metaschema/`
-- `.dockerignore` – excludes local secrets (e.g. `.env`) from the image
-- `ask-my-table.py` – main FastAPI router (formerly `data_chat.py`)
-- `prompts.py` – minimal prompt templates (replace with your own if needed)
+**Ask-My-Table** is an AI-powered **data chat application** that connects directly to your **[SuperTable](https://pypi.org/project/supertable/)** data warehouse.  
+It allows business users and analysts to **query data in natural language**, automatically generating and executing SQL through Azure OpenAI or other LLM providers — and rendering visual results, tables, and execution traces interactively in a modern web UI.
 
 ---
 
-## 1) Prepare your `.env` (⚠️ never commit this)
+## 🚀 Features
 
-Create a `.env` file next to `docker-compose.yml` with **valid** environment variables:
+- **Natural-language data queries** — ask questions like *“Show me monthly revenue by region this year”*
+- **AI-generated SQL** (DuckDB / SuperTable dialect) with strong validation and retry logic  
+- **Automatic explanations & chart suggestions** (bar, line, pie, table, …)
+- **Full execution trace** for transparency across planning, SQL generation, validation, execution, and explanation phases
+- **Multi-provider AI support**
+  - ✅ Azure OpenAI (default)
+  - ⚙️ OpenAI (Assistants v2)
+  - 🧩 Anthropic Claude (optional)
+- **SuperTable integration**
+  - REST-based metadata discovery
+  - Query execution via `/execute` API
+  - Auto-context resolution (organization, super_name, user_hash)
+- **Built-in Admin UI**
+  - Workspace (chat and results)
+  - Settings editor (`.env` values live-editable)
+  - Hot Cache viewer (metaschema explorer)
+- **Secure access** via `UI_ACCESS_TOKEN`
+- **Health endpoint:** `/healthz`
+
+---
+
+## 🧩 Architecture Overview
+
+| Layer | Module | Description |
+|-------|---------|-------------|
+| **FastAPI backend** | `main.py` | Server entrypoint, auth, routing |
+| **LLM Integration** | `ai_chat_azure.py`, `ai_openai.py`, `ai_claude.py` | Azure / OpenAI / Claude connectors |
+| **Pipeline Engine** | `ask_my_table.py` | Planning → SQL → Execution → Explanation |
+| **Prompts & Templates** | `prompts.py` | Instruction and prompt builders |
+| **SuperTable REST client** | `_connect_supertable.py` | Authenticated connector to SuperTable API |
+| **Metadata management** | `hot_cache.py`, `gen_metasample.py`, `gen_metadata.py` | Sample generation and AI-assisted schema enrichment |
+| **Configuration API** | `settings.py` | Live `.env` editing and reload |
+| **Frontend** | `templates/ask.html`, `ui.py` | Modern single-page app (Chart.js + Highlight.js) |
+
+---
+
+## ⚙️ Environment Variables
+
+Create a `.env` file at the project root (auto-loaded via `python-dotenv`):
 
 ```bash
-# Provider
-AI_PROVIDER=openai_assistant
-OPENAI_API_KEY=sk-***REDACTED***
+# Server
+HOST=127.0.0.1
+PORT=8080
+UI_ACCESS_TOKEN=your_secret_token_here
 
-# Assistants
-OPENAI_GENERIC_ID=asst_...
+# SuperTable connection
+SUPERTABLE_URL=http://0.0.0.0:8000
+SUPERTABLE_ADMIN_TOKEN=your_admin_token
+SUPERTABLE_ORGANIZATION=kladna-soft
+SUPER_NAME=ProdBigChange
+SUPER_USER_HASH=...
+
+# Azure OpenAI (default)
+AI_PROVIDER=azure_openai
+AZURE_OPENAI_ENDPOINT=https://your-endpoint.openai.azure.com/
+AZURE_OPENAI_DEPLOYMENT=gpt-5-nano-2
+AZURE_OPENAI_API_VERSION=2024-12-01-preview
+AZURE_OPENAI_API_KEY=sk-...
+
+# (Optional OpenAI / Anthropic)
+OPENAI_API_KEY=sk-...
 OPENAI_METABUILDER_ID=asst_...
-OPENAI_SQLGENERATOR_ID=asst_...
-ASSISTANT_MAX_WAIT_SEC=300
-ASSISTANT_HTTP_TIMEOUT=300
-
-# DB (if the DB runs on your host, use host.docker.internal)
-DB_MODE=sqlserver
-SYNAPSE_SERVER=192.168.168.130
-SYNAPSE_DATABASE=Drinks
-SYNAPSE_USERNAME=sa
-SYNAPSE_PASSWORD=YourStrong!Password123
-SYNAPSE_ODBC_DRIVER=ODBC Driver 18 for SQL Server
-
-# Metaschema directory
-METASCHEMA_DIR=/app/metaschema
-
-# Optional HUD/debug
-HUD_PAGE_INTERVAL=800
-HUD_PAGE_SIZE=3
-HUD_LABEL_MAX=16
-FORCE_MULTILINE_PROGRESS=0
-HTTPX_LOG_LEVEL=INFO
-PRINT_HTTP_BODIES=1
-MAX_PRINT_CHARS=8000
-
-# Retries
-SQL_MAX_RETRIES=5
-AUX_MAX_RETRIES=5
+ANTHROPIC_API_KEY=...
 ```
 
-> **Important:** Make sure you spell it exactly `METASCHEMA_DIR` — not `METASSCHEMA_DIR`.
-
 ---
 
-## 2) Add your metaschema JSON files
+## 🖥️ Running Locally
 
-Put your AI-metadata JSON definitions in `./metaschema/` (on your host).  
-These are automatically mounted into the container at `/app/metaschema`.
+### Prerequisites
+- Python 3.10+
+- FastAPI, Uvicorn, Requests, Python-Dotenv
 
----
-
-## 3) Build & Run
-
-Using **Docker Compose** (recommended):
-
+Install dependencies:
 ```bash
-docker compose up --build
-# UI:     http://localhost:8080/ui
-# Health: http://localhost:8080/healthz
+pip install -r requirements.txt
 ```
 
-Or manually with plain Docker:
-
+### Start the server
 ```bash
-docker build -t ask-my-table:latest .
-docker run --rm -p 8080:8080 --env-file .env   --add-host host.docker.internal:host-gateway   -v "$PWD/metaschema:/app/metaschema:ro"   ask-my-table:latest
+python main.py
+```
+
+### Access the UI
+Open your browser at:  
+👉 [http://127.0.0.1:8080/ui?token=YOUR_TOKEN](http://127.0.0.1:8080/ui?token=YOUR_TOKEN)
+
+---
+
+## 🧠 Workflow Example
+
+1. User enters a question in plain English.  
+2. **PLAN phase:** AI selects relevant tables/columns from SuperTable metaschema.  
+3. **SQL phase:** AI generates a compliant DuckDB SQL query.  
+4. **EXEC phase:** Query runs via `/execute` API (SuperTable).  
+5. **EXPLAIN phase:** AI summarizes results and suggests a chart.  
+6. UI displays:
+   - Generated SQL  
+   - Data table  
+   - Visualization  
+   - Trace timeline  
+
+---
+
+## 🧩 Related Utilities
+
+| Script | Purpose |
+|--------|----------|
+| `gen_metasample.py` | Create sampled metadata from SuperTable tables |
+| `gen_metadata.py` | Enrich metasample → AI metadata (semantic model) |
+| `hot_cache.py` | Load and cache AI-enriched metaschemas |
+| `settings.py` | View & edit environment configuration via UI |
+
+---
+
+## 🧱 Folder Structure
+
+```
+app/
+ ├── main.py
+ ├── ask_my_table.py
+ ├── ai_chat_azure.py
+ ├── ai_openai.py
+ ├── ai_claude.py
+ ├── _connect_supertable.py
+ ├── prompts.py
+ ├── settings.py
+ ├── hot_cache.py
+ ├── gen_metasample.py
+ ├── gen_metadata.py
+ ├── templates/
+ │    └── ask.html
+ └── metaschema/
+      └── *.json
 ```
 
 ---
 
-## 4) API Endpoints
+## 🔒 Security
 
-| Endpoint | Method | Description |
-|-----------|---------|-------------|
-| `/ask-my-table/start` | POST | Start a new SQL assistant request |
-| `/ask-my-table/progress/{req_id}` | GET | Check background progress |
-| `/ask-my-table/result/{req_id}` | GET | Retrieve final query result |
-| `/ui` | GET | Lightweight debug web UI |
-| `/healthz` | GET | Health check endpoint |
-
----
-
-## 5) Troubleshooting
-
-- **ODBC driver not found:**  
-  The container installs `msodbcsql18` and `unixodbc`. Logs will confirm:
-  `DB driver selected: ODBC Driver 18 for SQL Server`.
-
-- **Database connection errors:**  
-  If the DB runs locally, use `SYNAPSE_SERVER=host.docker.internal` and keep `extra_hosts` in `docker-compose.yml`.
-
-- **Module import issues:**  
-  The refactored app dynamically loads `ask-my-table.py`, so filenames with hyphens work fine in Python.
-
-- **METASCHEMA not loading:**  
-  Confirm that `METASCHEMA_DIR` points to the correct JSON directory inside the container.
-
-- **UI not responding / port closed:**  
-  The app binds to `0.0.0.0:8080`. Check your firewall or port mappings.
+- Access protected via `UI_ACCESS_TOKEN`
+- Tokens accepted via:
+  - `Authorization: Bearer <token>`
+  - `?token=<token>` query parameter
+  - `ui_token` cookie (auto-set after login)
+- `.env` secrets never exposed to the frontend
 
 ---
 
-### Example
+## 🧾 License
 
-After starting with Docker Compose, visit:
-
-```
-http://localhost:8080/ui
-```
-
-Then try sending a query or SQL request.  
-The backend routes are now served under `/ask-my-table/...`.
+© 2025 Kladna Soft  
+Licensed under the **Super Table Public Use License (STPUL) v1.0**
 
 ---
 
-**Maintainer:** KladnaSoft  
-**Version:** Ask-My-Table (refactored successor to Data Chat)
+## 💡 Acknowledgements
+
+- [SuperTable](https://pypi.org/project/supertable/) — metadata-driven data warehouse
+- [FastAPI](https://fastapi.tiangolo.com/)
+- [Azure OpenAI Service](https://learn.microsoft.com/en-us/azure/ai-services/openai/)
+- [Chart.js](https://www.chartjs.org/)
+- [Highlight.js](https://highlightjs.org/)
