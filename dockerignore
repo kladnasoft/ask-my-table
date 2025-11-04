@@ -1,0 +1,29 @@
+# Never bake secrets into the image
+.env
+
+# Python noise
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+.mypy_cache/
+.pytest_cache/
+
+# Virtualenvs and build outputs
+.venv/
+venv/
+dist/
+build/
+.eggs/
+
+# VCS
+.git
+.gitignore
+
+# Local databases and junk
+*.db
+.DS_Store
+
+# Optional: prevent large samples from being copied (bind-mount instead)
+metasample/

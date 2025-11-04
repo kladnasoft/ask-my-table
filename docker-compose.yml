@@ -1,0 +1,21 @@
+services:
+  ask-my-table:
+    build: .
+    image: ask-my-table:latest
+    ports:
+      - "8080:8080"
+    # Load env vars without baking them into the image
+    env_file:
+      - .env
+    environment:
+      HOST: "0.0.0.0"
+      PORT: "8080"
+      # Use the correct env name (METASCHEMA_DIR). Bind mount below.
+      METASCHEMA_DIR: "${METASCHEMA_DIR:-/app/metaschema}"
+    # Mount your metaschema directory so you can edit without rebuilds
+    volumes:
+      - ./metaschema:/app/metaschema:ro
+    # If your SQL Server/Synapse is on the host, this makes it reachable as host.docker.internal
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped

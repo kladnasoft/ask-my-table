@@ -1,0 +1,828 @@
+<!-- templates/ask.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Ask My Table</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <style>
+    :root{
+      --bg:#0a0f17;
+      --bg-grad: radial-gradient(1000px 600px at 20% -10%, rgba(59,130,246,.20), transparent 60%),
+                 radial-gradient(900px 600px at 120% 10%, rgba(139,92,246,.18), transparent 60%),
+                 linear-gradient(180deg,#0a0f17 0%, #0b121d 100%);
+      --panel:#101827;
+      --panel-2:#0d1524;
+      --ink:#e5e7eb;
+      --ink-dim:#9aa3b2;
+      --muted:#9aa3b2;
+      --primary:#60a5fa;
+      --primary-2:#8b5cf6;
+      --ring:#3b82f6;
+
+      --log-border:#16233a;
+      --log-bg:#0a1220;
+      --log-hdr:#0d1b2a;
+      --phase:#c7d2fe;
+      --info:#93c5fd;
+      --warn:#facc15;
+      --error:#fecaca;
+      --ok:#86efac;
+
+      --chip:#253349;
+      --good:#22c55e;
+      --bad:#ef4444;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; padding:0;
+      background: var(--bg-grad);
+      color:var(--ink);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+    }
+    a{color:var(--primary); text-decoration:none}
+    .shell{max-width:1200px; margin:0 auto; padding:24px}
+    .stack{display:grid; gap:14px}
+    .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+
+    /* Top bar */
+    .topnav{
+      position:sticky; top:12px; z-index:20;
+      display:flex; justify-content:space-between; align-items:center;
+      backdrop-filter:saturate(1.2) blur(8px);
+      background: linear-gradient(180deg, rgba(17,24,39,.9) 0%, rgba(17,24,39,.75) 100%);
+      border:1px solid rgba(59,130,246,.28);
+      border-radius:14px; padding:10px 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.04);
+    }
+    .brand{
+      display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:.3px;
+      background: linear-gradient(90deg, #93c5fd, #a78bfa);
+      -webkit-background-clip:text; background-clip:text; color:transparent;
+    }
+    .brand .logo{
+      width:28px; height:28px; display:grid; place-items:center;
+      border-radius:8px; background:linear-gradient(135deg, #1f3a5f, #0b2540);
+      border:1px solid #294058; color:#dbeafe; font-weight:900;
+      box-shadow:0 6px 16px rgba(59,130,246,.25);
+    }
+    .tabs-top{display:flex; gap:8px; align-items:center}
+    .tab-top{
+      padding:8px 12px; border:1px solid #2a3c58; border-radius:10px;
+      background:linear-gradient(180deg, #0f2138, #0c1a2c);
+      color:#dbeafe; font-weight:800; cursor:pointer; transition:transform .08s ease, box-shadow .12s ease;
+    }
+    .tab-top:hover{transform:translateY(-1px)}
+    .tab-top.active{background:linear-gradient(180deg, #1f3a8a, #1b2f6d); border-color:#3b82f6; color:#f8fafc; box-shadow:0 4px 16px rgba(59,130,246,.25)}
+    .topnav .tiny{font-size:12px; color:#9aa3b2}
+
+    /* Cards & buttons */
+    .card{
+      background: linear-gradient(180deg, #0f172a, #0b1322);
+      border:1px solid rgba(148,163,184,.18);
+      border-radius:16px; padding:16px;
+      box-shadow: 0 12px 32px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.04);
+    }
+    .title{font-size:18px; font-weight:800; margin:0 0 8px 0; letter-spacing:.2px}
+
+    .btn{
+      appearance:none; border:1px solid #294058; border-radius:10px;
+      padding:10px 16px; background:linear-gradient(180deg, #0b2540, #081b31);
+      color:#d7eaff; font-weight:800; cursor:pointer; transition:transform .06s ease, filter .12s ease, box-shadow .12s ease;
+      min-width:110px;
+    }
+    .btn:hover{filter:brightness(1.08)}
+    .btn:active{transform:translateY(1px)}
+    .btn:disabled{opacity:.6; cursor:not-allowed}
+    .btn.ghost{background:linear-gradient(180deg, #0f2138, #0c1a2c); border-color:#253349; color:#c7d2fe}
+    .btn.good{background:linear-gradient(180deg, #0d2c1b, #072013); border-color:#164e32; color:#86efac}
+    .btn.bad{background:linear-gradient(180deg, #3b0d0d, #2a0909); border-color:#7f1d1d; color:#fecaca}
+
+    /* Prompt */
+    .input-wrap{display:grid; grid-template-columns:1fr auto; gap:10px; align-items:start}
+    textarea.prompt{
+      width:100%; min-height:92px; resize:vertical;
+      color:var(--ink); background:var(--panel-2);
+      border:1px solid #233043; border-radius:12px; padding:12px 14px;
+      font-size:14px; line-height:1.45; outline:none;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.02);
+    }
+    textarea.prompt:focus{border-color:var(--ring); box-shadow:0 0 0 3px rgba(59,130,246,.25), inset 0 0 0 1px rgba(255,255,255,.04)}
+    .statusline{display:flex; align-items:center; gap:10px; margin-top:10px; color:var(--ink-dim); font-size:13px}
+    .dot{width:10px; height:10px; border-radius:999px; background:var(--ink-dim)}
+    .dot.running{background:#f59e0b}
+    .dot.done{background:#22c55e}
+    .dot.err{background:#ef4444}
+
+    /* Chat/history */
+    .chat-history{display:grid; gap:16px; margin-top:18px}
+    .req{border:1px solid rgba(148,163,184,.18); border-radius:16px; overflow:hidden; background:linear-gradient(180deg, #0d1626, #0a1220)}
+    .req-head{display:flex; justify-content:space-between; align-items:center; padding:12px 14px; border-bottom:1px solid #152238; gap:10px; background:linear-gradient(180deg, #0d1b2a, #0b1724)}
+    .req-head .prompt{margin:0; color:#e2e8f0; font-weight:700; font-size:14px; background:transparent; border:none; min-height:auto; padding:0}
+
+    .tabs{display:flex; gap:6px; padding:8px; border-bottom:1px solid #152238; flex-wrap:wrap}
+    .tab{padding:6px 10px; font-weight:800; font-size:12.5px; border:1px solid #253349; background:linear-gradient(180deg, #0f2138, #0c1a2c); color:#c7d2fe; border-radius:8px; cursor:pointer}
+    .tab.active{background:linear-gradient(180deg, #1e3a8a, #1b2f6d); border-color:#3b82f6; color:#f1f5f9}
+    .panel{padding:12px; display:none}
+
+    .code{background:#0a1220; border:1px solid #1b2a44; border-radius:10px; padding:10px; overflow:auto}
+    .sql pre{margin:0}
+
+    .table-toolbar{display:flex; gap:8px; align-items:center; margin-bottom:8px; flex-wrap:wrap}
+    .table-wrap{overflow:auto; border:1px solid #1b2a44; border-radius:10px; max-height:420px}
+    table{border-collapse:collapse; width:100%; font-size:13px}
+    th,td{border-bottom:1px solid #1b2a44; padding:8px 10px; text-align:left}
+    th{position:sticky; top:0; background:#0a1322; z-index:1}
+
+    .chart-wrap{height:360px; border:1px solid #1b2a44; border-radius:10px; padding:10px; background:#07111f}
+    canvas.chart-canvas{width:100% !important; height:100% !important; display:block}
+
+    /* Trace/log */
+    .log-toolbar{display:grid; gap:8px; grid-template-columns:1fr auto auto auto auto; align-items:center; padding:8px; border:1px solid var(--log-border); border-radius:10px; background:var(--log-hdr); margin-bottom:8px}
+    .log-toolbar .group{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+    .chip{display:inline-flex; align-items:center; gap:6px; border:1px solid var(--chip); padding:4px 8px; border-radius:999px; font-size:12px; background:#0e2137; color:#dbeafe}
+    .log-search{min-width:220px; border:1px solid var(--chip); border-radius:8px; padding:6px 8px; background:#0e2137; color:#e5e7eb; font-size:13px}
+    .log-select{border:1px solid var(--chip); border-radius:8px; padding:6px 8px; background:#0e2137; color:#e5e7eb; font-size:13px}
+    .log-toggle{display:inline-flex; align-items:center; gap:6px; font-size:12px; color:#cbd5e1; user-select:none; cursor:pointer}
+    .log-toggle input{accent-color:#3b82f6}
+    .trace-wrap{border:1px solid var(--log-border); border-radius:10px; background:#08101b; max-height:420px; overflow:auto}
+    .trace-header{position:sticky; top:0; z-index:1; display:grid; grid-template-columns:88px 110px 1fr 120px; gap:10px; padding:8px 10px; border-bottom:1px solid var(--log-border); background:#0b192c; font-size:12px; color:#fff9}
+    .trace-list{list-style:none; margin:0; padding:0}
+    .trace-item{display:grid; grid-template-columns:88px 110px 1fr 120px; align-items:start; gap:10px; padding:8px 10px; border-bottom:1px solid var(--log-border); background:var(--log-bg); font-size:13px}
+    .trace-time{font-variant-numeric:tabular-nums; color:#cbd5e1}
+    .trace-time small{color:#9aa3b2; font-size:11px; margin-left:6px}
+    .trace-phase{font-weight:800; color:var(--phase); display:flex; align-items:center; gap:6px}
+    .trace-msg{color:#d1d5db; white-space:pre-wrap; word-break:break-word}
+    .trace-badge{display:flex; justify-content:flex-end; align-items:center; gap:8px}
+    .badge{font-size:11px; padding:2px 8px; border-radius:999px; border:1px solid var(--chip)}
+    .badge.info{color:var(--info)}
+    .badge.warn{color:var(--warn)}
+    .badge.error{color:var(--error); border-color:#7f1d1d}
+    .badge.ok{color:var(--ok)}
+
+    /* Settings + Hot Cache */
+    .settings-grid{display:grid; gap:12px}
+    .kv{display:grid; grid-template-columns:220px 1fr auto; gap:10px; align-items:center}
+    .kv label{color:#cbd5e1; font-size:13px}
+    .kv input, .kv select{width:100%; background:#0e2137; color:#e5e7eb; border:1px solid #253349; border-radius:8px; padding:8px 10px; font-size:13px}
+    .tiny{font-size:12px; color:var(--ink-dim)}
+    .pill{display:inline-flex; align-items:center; gap:6px; padding:4px 8px; border:1px solid #253349; border-radius:999px; font-size:12px; background:#0e2137; color:#c7d2fe}
+    .divider{height:1px; background:#1f2a3a; margin:4px 0 12px}
+    .kbd{font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace; font-size:12px; color:#e5e7eb}
+    .two-col{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+    @media (max-width: 980px){.two-col{grid-template-columns:1fr}}
+
+    /* Result presenter */
+    .result-grid{display:grid; gap:12px}
+    .result-block{border:1px solid #1b2a44; border-radius:12px; padding:12px; background:#0a1220}
+    .result-block h4{margin:0 0 8px 0; font-size:14px}
+    .togglebar{display:flex; gap:8px; align-items:center; margin-top:8px}
+    .kvlist{display:grid; gap:6px; font-size:13px}
+    .kvlist .k{color:#9fb3c8}
+    .kvlist .v{color:#e5e7eb}
+  </style>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3"></script>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/base16/dracula.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/sql.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/json.min.js"></script>
+</head>
+<body>
+  <div class="shell">
+    <!-- Top navigation -->
+    <div class="topnav">
+      <div class="row">
+        <div class="brand">
+          <div class="logo">A</div>
+          <div>Ask&nbsp;My&nbsp;Table</div>
+        </div>
+        <div class="tabs-top" style="margin-left:14px;">
+          <button id="topChat" class="tab-top active">Workspace</button>
+          <button id="topSettings" class="tab-top">Settings</button>
+          <button id="topHotCache" class="tab-top">Hot Cache</button>
+        </div>
+      </div>
+      <div class="tiny right">
+        <a href="/healthz" target="_blank" style="margin-right:8px;">healthz</a>
+        <button id="logoutBtn" class="tab-top">Logout</button>
+      </div>
+    </div>
+
+    <!-- PAGE: WORKSPACE -->
+    <div id="page-chat" class="stack" style="margin-top:12px;">
+      <div class="card">
+        <div class="title">Ask your data</div>
+        <div class="input-wrap">
+          <textarea id="prompt" class="prompt" placeholder="e.g. “Show me sales by month and region, last 12 months”"></textarea>
+          <div>
+            <button id="runBtn" class="btn">Run</button>
+            <div class="statusline">
+              <div id="dot" class="dot"></div>
+              <div id="statusText">Idle</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="history" class="chat-history"></div>
+    </div>
+
+    <!-- PAGE: SETTINGS -->
+    <div id="page-settings" class="stack" style="display:none; margin-top:12px;">
+      <div class="card">
+        <div class="row" style="justify-content:space-between;">
+          <div class="title">Application Settings</div>
+          <div class="tiny">.env path: <span id="dotenvPath" class="kbd">—</span></div>
+        </div>
+        <div class="divider"></div>
+        <div id="settingsForm" class="settings-grid"></div>
+        <div class="divider"></div>
+        <div class="row" style="justify-content:flex-end;">
+          <button id="btnRefresh" class="btn ghost">Refresh</button>
+          <button id="btnSave" class="btn">Save</button>
+          <button id="btnApply" class="btn good">Save & Apply</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: HOT CACHE -->
+    <div id="page-hotcache" class="stack" style="display:none; margin-top:12px;">
+      <div class="two-col">
+        <div class="card">
+          <div class="row" style="justify-content:space-between;">
+            <div class="title">Hot Cache (Metaschema) — Tables</div>
+            <div class="row">
+              <span id="cacheCount" class="pill">0 tables</span>
+              <span class="tiny">Dir: <span id="msDir" class="kbd">—</span></span>
+            </div>
+          </div>
+          <div class="divider"></div>
+          <div class="row" style="justify-content:space-between;">
+            <input id="cacheSearch" placeholder="Filter tables…" class="kv-input" style="flex:1; background:#0e2137; color:#e5e7eb; border:1px solid #253349; border-radius:8px; padding:8px 10px;"/>
+            <button id="btnReloadMeta" class="btn">Reload metaschema</button>
+          </div>
+          <div class="divider"></div>
+          <div id="cacheList" class="table-wrap" style="max-height:420px;">
+            <table><thead><tr><th>schema.table</th></tr></thead><tbody id="cacheTBody"></tbody></table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row" style="justify-content:space-between;">
+            <div class="title">Item content</div>
+            <div class="row">
+              <span class="tiny">Selected:</span>
+              <span id="activeFqn" class="pill">—</span>
+              <button id="btnCopyItem" class="btn ghost">Copy JSON</button>
+              <button id="btnDownloadItem" class="btn">Download JSON</button>
+            </div>
+          </div>
+          <div class="divider"></div>
+          <div class="code"><pre><code id="itemJson" class="language-json">{}</code></pre></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ───────────────────── Auth glue ─────────────────────
+    function getQS(name){return new URLSearchParams(location.search).get(name)}
+    function getCookie(name){
+      const parts=(document.cookie||'').split('; ');
+      for(const p of parts){const idx=p.indexOf('='); if(idx===-1) continue; const k=p.slice(0,idx); if(k===name) return decodeURIComponent(p.slice(idx+1))}
+      return null;
+    }
+    function storeToken(tok){try{localStorage.setItem('ui_token', tok)}catch(_){}}; function readToken(){try{return localStorage.getItem('ui_token')}catch(_){return null}}
+
+    async function ensureAuthCookie(){
+      const urlTok=getQS('token'); const haveCookie=!!getCookie('ui_token');
+      if(urlTok && !haveCookie){
+        storeToken(urlTok);
+        const fd=new FormData(); fd.append('token', urlTok); fd.append('next', location.pathname);
+        try{await fetch('/login',{method:'POST', body:fd, credentials:'same-origin'})}catch(_){}
+        const clean=location.pathname + location.hash; history.replaceState(null,'',clean);
+      }
+    }
+    function apiFetch(url,opts={}){
+      const token=readToken()||getQS('token'); const headers=new Headers(opts.headers||{});
+      if(token && !headers.has('Authorization')) headers.set('Authorization','Bearer '+token);
+      return fetch(url,{...opts, credentials:'same-origin', headers});
+    }
+    ensureAuthCookie();
+
+    const POLL_MS = {{POLL_INTERVAL_MS}};
+
+    let activeReq=null, activeCard=null;
+
+    // Top navigation
+    const topChat=document.getElementById('topChat');
+    const topSettings=document.getElementById('topSettings');
+    const topHotCache=document.getElementById('topHotCache');
+    const pageChat=document.getElementById('page-chat');
+    const pageSettings=document.getElementById('page-settings');
+    const pageHotCache=document.getElementById('page-hotcache');
+
+    const logoutBtn=document.getElementById('logoutBtn');
+    if(logoutBtn){
+      logoutBtn.addEventListener('click', async ()=>{
+        try{localStorage.removeItem('ui_token')}catch(_){}
+        try{await fetch('/logout',{method:'POST', credentials:'same-origin'})}catch(_){}
+        location.href='/login';
+      });
+    }
+    function setTopActive(btn,on){btn.classList[on?'add':'remove']('active')}
+    function showPage(which){
+      pageChat.style.display='none'; pageSettings.style.display='none'; pageHotCache.style.display='none';
+      setTopActive(topChat,false); setTopActive(topSettings,false); setTopActive(topHotCache,false);
+      if(which==='settings'){pageSettings.style.display='grid'; setTopActive(topSettings,true); loadSettings();}
+      else if(which==='hotcache'){pageHotCache.style.display='grid'; setTopActive(topHotCache,true); loadHotCache();}
+      else {pageChat.style.display='grid'; setTopActive(topChat,true);}
+    }
+    topChat.addEventListener('click',()=>showPage('chat'));
+    topSettings.addEventListener('click',()=>showPage('settings'));
+    topHotCache.addEventListener('click',()=>showPage('hotcache'));
+
+    // ───────────────────── Settings Page ─────────────────────
+    async function loadSettings(){
+      try{
+        const resp=await apiFetch('/settings/config'); if(!resp.ok) throw new Error('Failed to load settings');
+        const data=await resp.json();
+        document.getElementById('dotenvPath').textContent=data.dotenv_path||'—';
+        const form=document.getElementById('settingsForm'); form.innerHTML='';
+
+        data.items.forEach(item=>{
+          const div=document.createElement('div'); div.className='kv';
+          const label=document.createElement('label'); label.textContent=item.key; label.htmlFor=`setting-${item.key}`;
+          let input;
+          if(item.key==='AI_PROVIDER'){
+            input=document.createElement('select'); input.id=`setting-${item.key}`;
+            input.innerHTML=`
+              <option value="azure_openai" ${item.effective==='azure_openai'?'selected':''}>Azure OpenAI</option>
+              <option value="openai" ${item.effective==='openai'?'selected':''}>OpenAI</option>
+            `;
+          }else if(item.key==='DB_MODE'){
+            input=document.createElement('select'); input.id=`setting-${item.key}`;
+            input.innerHTML=`
+              <option value="supertable" ${item.effective==='supertable'?'selected':''}>Supertable</option>
+              <option value="synapse" ${item.effective==='synapse'?'selected':''}>Synapse</option>
+            `;
+          }else{
+            input=document.createElement('input'); input.id=`setting-${item.key}`;
+            input.type=item.secret?'password':'text'; input.value=item.value||''; input.placeholder=item.effective||'';
+          }
+          const effectiveSpan=document.createElement('span'); effectiveSpan.className='tiny'; effectiveSpan.textContent=item.effective||'(not set)';
+          div.appendChild(label); div.appendChild(input); div.appendChild(effectiveSpan); form.appendChild(div);
+        });
+      }catch(err){console.error('Failed to load settings:',err)}
+    }
+    async function saveSettings(apply=false){
+      try{
+        const form=document.getElementById('settingsForm'); const inputs=form.querySelectorAll('input, select'); const updates=[];
+        inputs.forEach(input=>{
+          const key=input.id.replace('setting-',''); let value=input.value;
+          if(input.type==='checkbox'){ value=input.checked?input.value:null; }
+          else if(value===''){ value=null; }
+          updates.push({key, value});
+        });
+        const resp=await apiFetch('/settings/config',{method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({updates, apply})});
+        if(!resp.ok) throw new Error('Failed to save settings');
+        await resp.json();
+      }catch(err){ console.error('Failed to save settings:',err); }
+    }
+    document.getElementById('btnRefresh')?.addEventListener('click', loadSettings);
+    document.getElementById('btnSave')?.addEventListener('click', ()=>saveSettings(false));
+    document.getElementById('btnApply')?.addEventListener('click', ()=>saveSettings(true));
+
+    // ───────────────────── Hot Cache Page ─────────────────────
+    let currentCacheData=null, selectedFqn=null;
+    async function loadHotCache(){
+      try{
+        const resp=await apiFetch('/settings/cache'); if(!resp.ok) throw new Error('Failed to load cache');
+        const data=await resp.json();
+        currentCacheData=data;
+        document.getElementById('msDir').textContent=data.metaschema_dir||'—';
+        document.getElementById('cacheCount').textContent=`${data.count} tables`;
+        renderCacheTable(data.tables||[]);
+      }catch(err){console.error('Failed to load hot cache:',err)}
+    }
+    function renderCacheTable(tables){
+      const tbody=document.getElementById('cacheTBody'); tbody.innerHTML='';
+      const searchTerm=(document.getElementById('cacheSearch')?.value||'').toLowerCase();
+      const filtered=tables.filter(t=>t.toLowerCase().includes(searchTerm));
+      filtered.forEach(table=>{
+        const tr=document.createElement('tr'); const td=document.createElement('td');
+        td.textContent=table; td.style.cursor='pointer'; td.style.padding='8px 10px';
+        td.addEventListener('click',()=>selectCacheItem(table));
+        tr.appendChild(td); tbody.appendChild(tr);
+      });
+    }
+    async function selectCacheItem(fqn){
+      selectedFqn=fqn; document.getElementById('activeFqn').textContent=fqn;
+      try{
+        const resp=await apiFetch(`/settings/cache/item?fqn=${encodeURIComponent(fqn)}`); if(!resp.ok) throw new Error('Failed to load cache item');
+        const data=await resp.json();
+        const jsonEl=document.getElementById('itemJson'); jsonEl.textContent=JSON.stringify(data.meta,null,2); try{hljs.highlightElement(jsonEl)}catch(_){}
+      }catch(err){console.error('Failed to load cache item:',err); document.getElementById('itemJson').textContent='// Error loading item'}
+    }
+    async function reloadCache(){
+      try{
+        const resp=await apiFetch('/settings/cache/reload',{method:'POST'}); if(!resp.ok) throw new Error('Failed to reload cache');
+        const data=await resp.json(); currentCacheData=data;
+        document.getElementById('cacheCount').textContent=`${data.count} tables`;
+        renderCacheTable(data.tables||[]);
+      }catch(err){console.error('Failed to reload cache:',err);}
+    }
+    document.getElementById('btnReloadMeta')?.addEventListener('click', reloadCache);
+
+    // ───────────────────── Workspace Code ─────────────────────
+    const runBtn=document.getElementById('runBtn');
+    const promptEl=document.getElementById('prompt');
+    const dot=document.getElementById('dot');
+    const statusText=document.getElementById('statusText');
+    const historyEl=document.getElementById('history');
+
+    function setRunning(on){
+      if(on){runBtn.disabled=true; promptEl.disabled=true; dot.classList.remove('done','err'); dot.classList.add('running'); statusText.textContent='Working…'}
+      else{runBtn.disabled=false; promptEl.disabled=false; dot.classList.remove('running','err'); dot.classList.add('done'); statusText.textContent='Idle'}
+    }
+    function setError(msg){dot.classList.remove('running','done'); dot.classList.add('err'); statusText.textContent=msg||'Error'; runBtn.disabled=false; promptEl.disabled=false}
+
+    function normalizeRows(columns, rows){
+      const cols=Array.isArray(columns)?columns:[]; if(!Array.isArray(rows)) return [];
+      return rows.map(r=>{
+        if(r && typeof r==='object' && !Array.isArray(r)) return r;
+        if(Array.isArray(r)){ const obj={}; cols.forEach((c,i)=>{obj[c]=r[i]}); return obj; }
+        return {};
+      });
+    }
+
+    function createRequestCard(promptText){
+      const card=document.createElement('div'); card.className='req';
+      card.$ = {}; // quick refs
+
+      // header
+      const head=document.createElement('div'); head.className='req-head';
+      const p=document.createElement('div'); p.className='prompt'; p.textContent=promptText;
+      const small=document.createElement('div'); small.className='tiny'; small.textContent='';
+      head.appendChild(p); head.appendChild(small);
+
+      // tabs
+      const tabs=document.createElement('div'); tabs.className='tabs';
+      const tabNames=['Result','SQL','Plan','Data','Log'];
+      tabNames.forEach((name, idx)=>{
+        const t=document.createElement('button'); t.className='tab'+(idx===0?' active':''); t.dataset.panel=name.toLowerCase(); t.textContent=name; tabs.appendChild(t);
+      });
+
+      // bodies
+      const bodyEl=document.createElement('div');
+
+      /* RESULT panel (visualization + optional table) */
+      const resultPanel=document.createElement('div'); resultPanel.className='panel result'; resultPanel.style.display='block';
+      resultPanel.innerHTML=`
+        <div class="result-grid">
+          <div class="result-block">
+            <div class="row" style="justify-content:space-between; align-items:center;">
+              <h4 style="margin:0;">Visualization</h4>
+              <div class="row" style="gap:8px;">
+                <label class="tiny" for="chartTypeSel">Type</label>
+                <select id="chartTypeSel" class="log-select">
+                  <option value="bar">Bar</option>
+                  <option value="line">Line</option>
+                  <option value="pie">Pie</option>
+                  <option value="doughnut">Doughnut</option>
+                  <option value="scatter">Scatter</option>
+                </select>
+                <button id="btnShowChart" class="btn">Chart</button>
+                <button id="btnShowTable" class="btn ghost">Table</button>
+              </div>
+            </div>
+
+            <div id="resultChartWrap" class="chart-wrap" style="height:260px; margin-top:8px; display:none;">
+              <canvas></canvas>
+            </div>
+
+            <div id="resultTableWrap" class="table-wrap" style="display:none; margin-top:8px;">
+              <table>
+                <thead><tr id="resultTh"></tr></thead>
+                <tbody id="resultTb"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="result-block">
+            <h4>Explanation</h4>
+            <div id="resultExpl">Waiting for response…</div>
+          </div>
+        </div>
+      `;
+
+      // SQL panel
+      const sqlPanel=document.createElement('div'); sqlPanel.className='panel sql';
+      sqlPanel.innerHTML=`
+        <div class="code"><pre><code class="language-sql">// SQL will appear here…</code></pre></div>
+      `;
+
+      // PLAN panel
+      const planPanel=document.createElement('div'); planPanel.className='panel plan';
+      planPanel.innerHTML=`
+        <div class="result-block">
+          <h4>Execution Plan</h4>
+          <div id="planHost">
+            <div class="kvlist"><span class="k">Tables</span><div class="v"><em>—</em></div></div>
+            <div class="kvlist" style="margin-top:6px;"><span class="k">Columns</span><div class="v"><em>—</em></div></div>
+            <div class="kvlist" style="margin-top:6px;"><span class="k">Notes</span><div class="v"><em>—</em></div></div>
+          </div>
+        </div>
+      `;
+
+      // DATA panel — ALWAYS TABLE VIEW
+      const dataPanel=document.createElement('div'); dataPanel.className='panel data';
+      dataPanel.innerHTML=`
+        <div class="table-toolbar"><span class="chip">Preview</span></div>
+        <div class="table-wrap" id="tableWrap">
+          <table>
+            <thead><tr id="th"></tr></thead>
+            <tbody id="tb"></tbody>
+          </table>
+        </div>
+      `;
+
+      // LOG panel
+      const logPanel=document.createElement('div'); logPanel.className='panel log';
+      logPanel.innerHTML=`
+        <div class="log-toolbar">
+          <div class="group">
+            <span class="chip">Trace</span>
+            <label class="log-toggle"><input id="autoScroll" type="checkbox" checked> Auto-scroll</label>
+          </div>
+          <input id="traceSearch" class="log-search" placeholder="Filter message…">
+          <select id="levelSel" class="log-select">
+            <option value="">All</option>
+            <option value="info">Info</option>
+            <option value="warn">Warn</option>
+            <option value="error">Error</option>
+            <option value="ok">OK</option>
+          </select>
+          <button class="btn ghost" id="collapseBtn">Collapse</button>
+          <button class="btn" id="expandAllBtn">Expand</button>
+        </div>
+
+        <div class="trace-wrap">
+          <div class="trace-header">
+            <div>Elapsed</div>
+            <div>Phase</div>
+            <div>Message</div>
+            <div class="right">Status</div>
+          </div>
+          <ul class="trace-list"></ul>
+        </div>
+      `;
+
+      // collect refs + switching
+      const switchPanel = (name)=>{
+        Array.from(tabs.querySelectorAll('.tab')).forEach(t=>t.classList.remove('active'));
+        const btn = Array.from(tabs.querySelectorAll('.tab')).find(t=>t.dataset.panel===name);
+        if(btn) btn.classList.add('active');
+        [resultPanel, sqlPanel, planPanel, dataPanel, logPanel].forEach(p=>p.style.display='none');
+        const show = {result:resultPanel, sql:sqlPanel, plan:planPanel, data:dataPanel, log:logPanel}[name];
+        if(show) show.style.display='block';
+      };
+      card.$.tabs = tabs;
+      card.$.resultPanel = resultPanel;
+      card.$.sqlPanel = sqlPanel;
+      card.$.planPanel = planPanel;
+      card.$.dataPanel = dataPanel;
+      card.$.logPanel = logPanel;
+      card.$.chart = null;
+      card.$.switchPanel = switchPanel;
+
+      tabs.addEventListener('click',(e)=>{
+        const btn=e.target.closest('.tab'); if(!btn) return; const name=btn.dataset.panel;
+        switchPanel(name);
+      });
+
+      // assemble
+      bodyEl.appendChild(resultPanel); bodyEl.appendChild(sqlPanel); bodyEl.appendChild(planPanel); bodyEl.appendChild(dataPanel); bodyEl.appendChild(logPanel);
+      card.appendChild(head); card.appendChild(tabs); card.appendChild(bodyEl);
+      return card;
+    }
+
+    runBtn.addEventListener('click',()=>{
+      const text=(promptEl.value||'').trim(); if(!text){promptEl.focus(); return;}
+      activeCard=createRequestCard(text);
+      historyEl.prepend(activeCard);
+      // Jump to LOG immediately on new run
+      activeCard.$.switchPanel('log');
+      requestAnimationFrame(()=>activeCard.scrollIntoView({behavior:'smooth', block:'start'}));
+      setRunning(true);
+      startRun(text);
+    });
+    promptEl.addEventListener('keydown',(e)=>{ if((e.ctrlKey||e.metaKey) && e.key==='Enter'){ runBtn.click(); } });
+
+    // API calls
+    async function startRun(promptText){
+      try{
+        const resp=await apiFetch('/ask-my-table/start',{method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text:promptText})});
+        if(!resp.ok) throw new Error('Start failed: '+resp.status);
+        const data=await resp.json(); activeReq=data.req_id; pollProgress(activeReq);
+      }catch(err){ console.error(err); setError('Failed to start'); }
+    }
+
+    async function pollProgress(reqId){
+      let done=false;
+      while(!done){
+        try{
+          const resp=await apiFetch(`/ask-my-table/progress/${reqId}`); if(!resp.ok) throw new Error('progress '+resp.status);
+          const data=await resp.json(); renderTrace(data.trace);
+          const small=activeCard.querySelector('.req-head .tiny');
+          if(small) small.textContent=`${data.short_status} • ${Math.round(data.total_duration_ms/1000)}s • attempts=${data.attempts}`;
+          if(data.status==='completed'){
+            done=true; await fetchResult(reqId);
+            activeCard.$.switchPanel('result'); // land on Result
+            setRunning(false); activeReq=null; break;
+          }
+        }catch(err){ console.error(err); setError('Progress error'); break; }
+        await new Promise(r=>setTimeout(r, POLL_MS));
+      }
+    }
+
+    async function fetchResult(reqId){
+      try{
+        const resp=await apiFetch(`/ask-my-table/result/${reqId}`); if(!resp.ok) throw new Error('result '+resp.status);
+        const data=await resp.json(); renderResult(data);
+      }catch(err){ console.error(err); setError('Result error'); }
+    }
+
+    // ─────────── Chart helpers ───────────
+    function findNumericColumn(cols, rows){
+      return cols.find(c => rows.some(r => typeof r[c] === 'number' && Number.isFinite(r[c])));
+    }
+    function aggregateByKey(rows, key, valueKey){
+      const map = new Map();
+      for(const r of rows){
+        const k = String(r[key]);
+        const v = Number(r[valueKey]);
+        if(Number.isFinite(v)) map.set(k, (map.get(k)||0) + v);
+      }
+      return { labels: Array.from(map.keys()), values: Array.from(map.values()) };
+    }
+    function buildDatasetForType(type, cols, rows, labelKey, valueKey){
+      if(type==='scatter'){
+        const xy = rows
+          .map(r => ({x: Number(r[labelKey]), y: Number(r[valueKey])}))
+          .filter(p => Number.isFinite(p.x) && Number.isFinite(p.y));
+        return { datasets: [{ label: `${valueKey} vs ${labelKey}`, data: xy, showLine:false }] };
+      }
+      const {labels, values} = aggregateByKey(rows, labelKey, valueKey);
+      return { labels, datasets: [{ label: valueKey, data: values }] };
+    }
+    function renderChart(canvas, prevChart, type, cols, rows, labelKey, valueKey){
+      if(prevChart){ prevChart.destroy(); }
+      if(type==='scatter'){
+        const ok = rows.some(r=>Number.isFinite(Number(r[labelKey]))) && rows.some(r=>Number.isFinite(Number(r[valueKey])));
+        if(!ok) return null;
+      }
+      const data = buildDatasetForType(type, cols, rows, labelKey, valueKey);
+      const options = { responsive:true, maintainAspectRatio:false, interaction:{mode:(type==='scatter'?'nearest':'index'), axis:(type==='scatter'?'xy':undefined), intersect:false} };
+      const ctx = canvas.getContext('2d');
+      return new Chart(ctx, { type, data, options });
+    }
+
+    function renderResult(data){
+      // RESULT presenter refs
+      const resultPanel = activeCard.$.resultPanel;
+      const explHost = resultPanel.querySelector('#resultExpl');
+      const chartTypeSel = resultPanel.querySelector('#chartTypeSel');
+      const btnShowChart = resultPanel.querySelector('#btnShowChart');
+      const btnShowTable = resultPanel.querySelector('#btnShowTable');
+      const resultChartWrap = resultPanel.querySelector('#resultChartWrap');
+      const resultChartCanvas = resultChartWrap.querySelector('canvas');
+      const resultTableWrap = resultPanel.querySelector('#resultTableWrap');
+      const resultTh = resultPanel.querySelector('#resultTh');
+      const resultTb = resultPanel.querySelector('#resultTb');
+
+      // PLAN refs
+      const planHost = activeCard.$.planPanel.querySelector('#planHost');
+
+      // SQL
+      const sqlCode=activeCard.$.sqlPanel.querySelector('code');
+      sqlCode.textContent=(data.sql||'').trim() || '-- no SQL produced --';
+      try{hljs.highlightElement(sqlCode)}catch(_){}
+
+      // Explanation
+      explHost.innerHTML = data.explanation_html || '<em>No explanation provided.</em>';
+
+      // Plan
+      const tables = Array.isArray(data?.plan?.tables) ? data.plan.tables : [];
+      const columnsGroup = data?.plan?.columns || {};
+      const notes = data?.plan?.notes || '—';
+
+      const tablesHtml = tables.length
+        ? `<ul>` + tables.map(t => `<li><strong>${escapeHtml(t.name||'')}</strong> – ${escapeHtml(t.reason||'')}</li>`).join('') + `</ul>`
+        : '<em>—</em>';
+
+      const columnsHtml = Object.keys(columnsGroup).length
+        ? `<ul>` + Object.entries(columnsGroup).map(([tbl, cols]) => `<li><strong>${escapeHtml(tbl)}:</strong> ${cols.map(c=>escapeHtml(c)).join(', ')}</li>`).join('') + `</ul>`
+        : '<em>—</em>';
+
+      planHost.innerHTML = `
+        <div class="kvlist"><span class="k">Tables</span><div class="v">${tablesHtml}</div></div>
+        <div class="kvlist" style="margin-top:6px;"><span class="k">Columns</span><div class="v">${columnsHtml}</div></div>
+        <div class="kvlist" style="margin-top:6px;"><span class="k">Notes</span><div class="v">${escapeHtml(notes)}</div></div>
+      `;
+
+      // Data normalize
+      const cols=data.columns||[];
+      const rows=normalizeRows(cols, data.rows||[]);
+
+      // Data tab: ALWAYS TABLE
+      const th=activeCard.$.dataPanel.querySelector('#th'); th.innerHTML='';
+      cols.forEach(c=>{const el=document.createElement('th'); el.textContent=c; th.appendChild(el)});
+      const tb=activeCard.$.dataPanel.querySelector('#tb'); tb.innerHTML='';
+      rows.forEach(r=>{
+        const tr=document.createElement('tr');
+        cols.forEach(c=>{const td=document.createElement('td'); td.textContent = (r[c]===null||r[c]===undefined)?'':String(r[c]); tr.appendChild(td)});
+        tb.appendChild(tr);
+      });
+
+      // Result tab: build table content for toggle
+      resultTh.innerHTML=''; resultTb.innerHTML='';
+      cols.forEach(c=>{const el=document.createElement('th'); el.textContent=c; resultTh.appendChild(el)});
+      rows.forEach(r=>{
+        const tr=document.createElement('tr');
+        cols.forEach(c=>{const td=document.createElement('td'); td.textContent = (r[c]===null||r[c]===undefined)?'':String(r[c]); tr.appendChild(td)});
+        resultTb.appendChild(tr);
+      });
+
+      // Determine suggested type & axes
+      const chart = data.chart || {};
+      const allowedTypes = ['bar','line','pie','doughnut','scatter'];
+      const suggestedType = (chart.type || 'line').toLowerCase();
+      const initialType = allowedTypes.includes(suggestedType) ? suggestedType : 'line';
+      chartTypeSel.value = initialType;
+
+      const labelKey = chart?.x || cols[0];
+      let valueKey = chart?.y || findNumericColumn(cols, rows);
+      if(!valueKey){ valueKey = cols.find(c => rows.some(r => Number.isFinite(Number(r[c])))); }
+
+      // Toggle handlers
+      let chartInst = activeCard.$.chart;
+      function showChart(){
+        resultTableWrap.style.display='none';
+        if(cols.length && rows.length && labelKey && valueKey){
+          resultChartWrap.style.display='block';
+          const type = chartTypeSel.value;
+          chartInst = renderChart(resultChartCanvas, chartInst, type, cols, rows, labelKey, valueKey);
+          activeCard.$.chart = chartInst;
+        }else{
+          resultChartWrap.style.display='none';
+        }
+      }
+      function showTable(){
+        resultChartWrap.style.display='none';
+        resultTableWrap.style.display='block';
+      }
+      btnShowChart.onclick = showChart;
+      btnShowTable.onclick = showTable;
+      chartTypeSel.onchange = ()=>{ if(resultChartWrap.style.display!=='none') showChart(); };
+
+      // Default view: CHART
+      showChart();
+    }
+
+    function renderTrace(items){
+      if(!activeCard) return;
+      const list=activeCard.querySelector('.trace-list'); const auto=activeCard.querySelector('#autoScroll'); const q=(activeCard.querySelector('#traceSearch')||{}).value||''; const lvl=(activeCard.querySelector('#levelSel')||{}).value||'';
+      list.innerHTML='';
+      items.forEach(it=>{
+        if(q && !String(it.msg||'').toLowerCase().includes(q.toLowerCase())) return;
+        if(lvl && (it.status||'')!==lvl) return;
+        const li=document.createElement('li'); li.className='trace-item';
+        const t=document.createElement('div'); t.className='trace-time'; t.textContent=(it.t_ms/1000).toFixed(2)+'s'; const s=document.createElement('small'); s.textContent='+'+it.dt_ms+'ms'; t.appendChild(s);
+        const phase=document.createElement('div'); phase.className='trace-phase'; phase.textContent=it.phase;
+        const msg=document.createElement('div'); msg.className='trace-msg'; msg.textContent=it.msg;
+        const badge=document.createElement('div'); badge.className='trace-badge';
+        const b=document.createElement('span'); b.className='badge '+(it.status||'info'); b.textContent=(it.status||'info').toUpperCase();
+        badge.appendChild(b);
+        li.appendChild(t); li.appendChild(phase); li.appendChild(msg); li.appendChild(badge); list.appendChild(li);
+      });
+      if(auto && auto.checked){
+        const wrap = list.parentElement;
+        wrap.scrollTop = wrap.scrollHeight;
+      }
+    }
+
+    // Safe text
+    function escapeHtml(s){
+      if(s===null || s===undefined) return '';
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+    }
+  </script>
+</body>
+</html>
